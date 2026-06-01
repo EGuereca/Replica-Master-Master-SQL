@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mysql-master1:
+    image: mysql:8.0
+    container_name: mysql-master1
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3305:3306"
+    volumes:
+      - ./mysql-master1/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./mysql-master1/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - db_net
+
+  mysql-master2:
+    image: mysql:8.0
+    container_name: mysql-master2
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql-master2/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./mysql-master2/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - db_net
+
+  backup-server:
+    build: ./backup-server
+    container_name: backup-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./backups:/backups
+      - ./logs:/logs
+    networks:
+      - db_net
+    depends_on:
+      - mysql-master1
+      - mysql-master2
+
+networks:
+  db_net:
+    driver: bridge

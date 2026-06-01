@@ -1,0 +1,2 @@
+# Run backup every minute for testing
+* * * * * /backup.sh >> /logs/cron.log 2>&1
