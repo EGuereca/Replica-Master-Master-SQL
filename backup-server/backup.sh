@@ -9,7 +9,7 @@ echo "[$TIMESTAMP] Starting backup process..." >> "$LOG_FILE"
 
 # Backup Master 1
 echo "[$TIMESTAMP] Backing up mysql-master1..." >> "$LOG_FILE"
-mysqldump -h mysql-master1 -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" > "$BACKUP_DIR/master1_$TIMESTAMP.sql"
+mysqldump --no-tablespaces -h mysql-master1 -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" > "$BACKUP_DIR/master1_$TIMESTAMP.sql"
 gzip "$BACKUP_DIR/master1_$TIMESTAMP.sql"
 if [ $? -eq 0 ]; then
     echo "[$TIMESTAMP] mysql-master1 backup successful." >> "$LOG_FILE"
@@ -19,7 +19,7 @@ fi
 
 # Backup Master 2
 echo "[$TIMESTAMP] Backing up mysql-master2..." >> "$LOG_FILE"
-mysqldump -h mysql-master2 -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" > "$BACKUP_DIR/master2_$TIMESTAMP.sql"
+mysqldump --no-tablespaces -h mysql-master2 -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" > "$BACKUP_DIR/master2_$TIMESTAMP.sql"
 gzip "$BACKUP_DIR/master2_$TIMESTAMP.sql"
 if [ $? -eq 0 ]; then
     echo "[$TIMESTAMP] mysql-master2 backup successful." >> "$LOG_FILE"

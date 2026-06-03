@@ -1,6 +1,5 @@
 USE demo_db;
-CREATE USER IF NOT EXISTS 'replicator'@'%' IDENTIFIED BY 'replpassword';
-GRANT REPLICATION SLAVE ON *.* TO 'replicator'@'%';
+
 DROP TABLE IF EXISTS OrderDetails;
 DROP TABLE IF EXISTS Orders;
 DROP TABLE IF EXISTS Products;
