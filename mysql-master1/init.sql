@@ -1,6 +1,9 @@
 USE demo_db;
+SET sql_log_bin = 0;
 CREATE USER IF NOT EXISTS 'replicator'@'%' IDENTIFIED BY 'replpassword';
 GRANT REPLICATION SLAVE ON *.* TO 'replicator'@'%';
+FLUSH PRIVILEGES;
+SET sql_log_bin = 1;
 DROP TABLE IF EXISTS OrderDetails;
 DROP TABLE IF EXISTS Orders;
 DROP TABLE IF EXISTS Products;

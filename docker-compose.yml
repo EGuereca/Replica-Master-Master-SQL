@@ -20,7 +20,7 @@ services:
     container_name: mysql-master2
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.master2
     ports:
       - "3307:3306"
     volumes:
