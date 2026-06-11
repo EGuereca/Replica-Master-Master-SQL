@@ -1,0 +1,35 @@
+version: '3.8'
+
+# ============================================================
+#  PC1 — MySQL Master1 + Servidor de Respaldos
+#  Ejecutar en la computadora que alojará el nodo Master1.
+#  Requiere: .env con MASTER1_IP, MASTER2_IP, MYSQL_PORT
+# ============================================================
+
+services:
+  mysql-master1:
+    image: mysql:8.0
+    container_name: mysql-master1
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - ./mysql-master1/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./mysql-master1/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  backup-server:
+    build: ./backup-server
+    container_name: backup-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./backups:/backups
+      - ./logs:/logs
+    extra_hosts:
+      - "master1-host:${MASTER1_IP}"
+      - "master2-host:${MASTER2_IP}"
+    depends_on:
+      - mysql-master1

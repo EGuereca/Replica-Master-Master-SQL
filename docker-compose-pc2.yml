@@ -1,0 +1,20 @@
+version: '3.8'
+
+# ============================================================
+#  PC2 — MySQL Master2
+#  Ejecutar en la computadora que alojará el nodo Master2.
+#  Requiere: .env.master2 con MYSQL_ROOT_PASSWORD
+# ============================================================
+
+services:
+  mysql-master2:
+    image: mysql:8.0
+    container_name: mysql-master2
+    restart: unless-stopped
+    env_file:
+      - .env.master2
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql-master2/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./mysql-master2/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
