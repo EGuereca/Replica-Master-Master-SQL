@@ -1,8 +1,10 @@
 version: '3.8'
 
 # ============================================================
-#  PC2 — MySQL Master2
-#  Ejecutar en la computadora que alojará el nodo Master2.
+#  PC2 — MySQL Slave (Fase 1) → Master2 (Fase 2)
+#  Ejecutar en la computadora que alojará el nodo Slave/Master2.
+#  Fase 1: Arranca en modo solo lectura (read_only=ON).
+#  Fase 2: Se promueve a Master con 2-upgrade-to-master-master.sh.
 #  Requiere: .env.master2 con MYSQL_ROOT_PASSWORD
 # ============================================================
 

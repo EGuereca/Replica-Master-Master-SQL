@@ -2,7 +2,9 @@ version: '3.8'
 
 # ============================================================
 #  PC1 — MySQL Master1 + Servidor de Respaldos
-#  Ejecutar en la computadora que alojará el nodo Master1.
+#  Ejecutar en la computadora que alojará el nodo Master (PC1).
+#  Fase 1: Actúa como Master (escrituras + lecturas).
+#  Fase 2: Actúa como Master en topología Master-Master.
 #  Requiere: .env con MASTER1_IP, MASTER2_IP, MYSQL_PORT
 # ============================================================
 
