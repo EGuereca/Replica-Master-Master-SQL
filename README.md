@@ -38,7 +38,7 @@ Sistema de bases de datos MySQL dockerizado y distribuido en **dos computadoras 
 │  └──────────┬───────────┘    │     │    └──────────────────────┘  │
 │             │                │     │                              │
 │  ┌──────────▼───────────┐    │     │                              │
-│  │   backup-server      │────┼─────┼───▶ (respaldo de ambos)    │
+│  │   backup-server      │────┼─────┼───▶ (respaldo de ambos)     │
 │  │   (cron cada 5 min)  │    │     │                              │
 │  └──────────────────────┘    │     │                              │
 │                              │     │                              │
@@ -62,7 +62,7 @@ Sistema de bases de datos MySQL dockerizado y distribuido en **dos computadoras 
 │  └──────────┬───────────┘    │     │    └──────────────────────┘  │
 │             │                │     │                              │
 │  ┌──────────▼───────────┐    │     │                              │
-│  │   backup-server      │────┼─────┼───▶ (respaldo de ambos)    │
+│  │   backup-server      │────┼─────┼───▶ (respaldo de ambos)     │
 │  │   (cron cada 5 min)  │    │     │                              │
 │  └──────────────────────┘    │     │                              │
 │                              │     │                              │
