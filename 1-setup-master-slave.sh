@@ -7,6 +7,9 @@
 #  Configura a PC2 como Slave de solo lectura de PC1 (Master).
 #  PC2 arranca con read_only=ON y super_read_only=ON en my.cnf.
 #
+#  Usa el usuario admin_lan (creado en init.sql) para conectarse
+#  remotamente. root permanece restringido a localhost.
+#
 #  Ejecutar desde cualquier máquina con acceso LAN a ambos
 #  nodos y con mysql-client instalado.
 #  Las IPs se leen del archivo .env en el directorio actual.
@@ -31,24 +34,26 @@ if [ -z "${MASTER1_IP:-}" ] || [ -z "${MASTER2_IP:-}" ]; then
 fi
 
 MYSQL_PORT="${MYSQL_PORT:-3306}"
-ROOT_PASS="${MYSQL_ROOT_PASSWORD:-rootpassword}"
+ADMIN_USER="${ADMIN_USER:-admin_lan}"
+ADMIN_PASS="${ADMIN_PASSWORD:-admin_secure_pass}"
 
 echo "============================================"
 echo " Fase 1: Replicación Master → Slave (LAN)"
 echo " Master (PC1): $MASTER1_IP:$MYSQL_PORT"
 echo " Slave  (PC2): $MASTER2_IP:$MYSQL_PORT"
+echo " Usuario:      $ADMIN_USER"
 echo "============================================"
 echo ""
 
 # ── Esperar a que ambas bases de datos estén listas ────────
 echo "⏳ Esperando a mysql-master1 ($MASTER1_IP)..."
-until mysqladmin ping -h "$MASTER1_IP" -P "$MYSQL_PORT" --silent 2>/dev/null; do
+until mysqladmin ping -h "$MASTER1_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" --silent 2>/dev/null; do
     sleep 2
 done
 echo "   ✅ mysql-master1 está listo."
 
 echo "⏳ Esperando a mysql-master2 ($MASTER2_IP)..."
-until mysqladmin ping -h "$MASTER2_IP" -P "$MYSQL_PORT" --silent 2>/dev/null; do
+until mysqladmin ping -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" --silent 2>/dev/null; do
     sleep 2
 done
 echo "   ✅ mysql-master2 está listo."
@@ -63,7 +68,7 @@ echo ""
 
 # ── Paso 1: Verificar/crear usuario replicador en Master (PC1) ─
 echo "1️⃣  Verificando usuario de replicación en Master (PC1)..."
-mysql -h "$MASTER1_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -e "
+mysql -h "$MASTER1_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e "
 SET sql_log_bin = 0;
 CREATE USER IF NOT EXISTS 'replicator'@'%' IDENTIFIED BY 'replpassword';
 GRANT REPLICATION SLAVE ON *.* TO 'replicator'@'%';
@@ -74,7 +79,7 @@ echo "   ✅ Usuario 'replicator' verificado en Master (PC1)."
 
 # ── Paso 2: Configurar Slave (PC2) para replicar desde Master (PC1) ─
 echo "2️⃣  Configurando Slave (PC2) para replicar desde Master (PC1)..."
-mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -e "
+mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e "
 STOP REPLICA;
 CHANGE REPLICATION SOURCE TO
   SOURCE_HOST='$MASTER1_IP',
@@ -90,9 +95,9 @@ echo "   ✅ Replicación configurada."
 # ── Paso 3: Esperar sincronización completa ────────────────
 echo "3️⃣  Esperando sincronización del Slave (PC2)..."
 for i in $(seq 1 30); do
-    BEHIND=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -N -e \
+    BEHIND=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
         "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Seconds_Behind_Source" | awk '{print $2}')
-    SQL_RUNNING=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -N -e \
+    SQL_RUNNING=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
         "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Replica_SQL_Running:" | awk '{print $2}')
 
     if [ "$SQL_RUNNING" = "Yes" ] && [ "$BEHIND" = "0" ]; then
@@ -100,7 +105,7 @@ for i in $(seq 1 30); do
         break
     elif [ "$SQL_RUNNING" != "Yes" ]; then
         echo "   ❌ ERROR: El hilo SQL de replicación no está corriendo en Slave (PC2)."
-        mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -e \
+        mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e \
             "SHOW REPLICA STATUS\G" 2>/dev/null | grep -E "Last.*Error"
         exit 1
     fi
@@ -110,9 +115,9 @@ done
 
 # ── Paso 4: Verificar modo de solo lectura en Slave (PC2) ──
 echo "4️⃣  Verificando modo de solo lectura en Slave (PC2)..."
-READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -N -e \
+READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
     "SELECT @@global.read_only;" 2>/dev/null)
-SUPER_READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -N -e \
+SUPER_READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
     "SELECT @@global.super_read_only;" 2>/dev/null)
 
 if [ "$READ_ONLY" = "1" ] && [ "$SUPER_READ_ONLY" = "1" ]; then
@@ -131,13 +136,13 @@ echo ""
 
 # ── Mostrar estado del Slave ───────────────────────────────
 echo "=== Slave (PC2) — Replica Status ==="
-mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -e \
+mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e \
     "SHOW REPLICA STATUS\G" 2>/dev/null | grep -E "Replica_IO_Running|Replica_SQL_Running|Last_Error|Last_IO_Error|Seconds_Behind"
 
 # ── Verificar tablas replicadas ────────────────────────────
 echo ""
 echo "=== Verificación: Tablas replicadas en Slave (PC2) ==="
-mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -uroot -p"$ROOT_PASS" -e \
+mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e \
     "SHOW TABLES FROM demo_db;" 2>/dev/null
 
 echo ""
@@ -148,15 +153,15 @@ echo ""
 echo "Puedes probar la replicación unidireccional con:"
 echo ""
 echo "  # Insertar en Master (PC1) → debe replicarse al Slave (PC2)"
-echo "  mysql -h $MASTER1_IP -P $MYSQL_PORT -uroot -p$ROOT_PASS -e \\"
+echo "  mysql -h $MASTER1_IP -P $MYSQL_PORT -u$ADMIN_USER -p$ADMIN_PASS -e \\"
 echo "    \"INSERT INTO demo_db.Categories VALUES(99, 'Test', 'Desde Master');\""
 echo ""
 echo "  # Verificar en Slave (PC2)"
-echo "  mysql -h $MASTER2_IP -P $MYSQL_PORT -uroot -p$ROOT_PASS -e \\"
+echo "  mysql -h $MASTER2_IP -P $MYSQL_PORT -u$ADMIN_USER -p$ADMIN_PASS -e \\"
 echo "    \"SELECT * FROM demo_db.Categories WHERE CategoryID = 99;\""
 echo ""
 echo "  # Intentar escribir en Slave (PC2) → debe FALLAR (read_only)"
-echo "  mysql -h $MASTER2_IP -P $MYSQL_PORT -uroot -p$ROOT_PASS -e \\"
+echo "  mysql -h $MASTER2_IP -P $MYSQL_PORT -u$ADMIN_USER -p$ADMIN_PASS -e \\"
 echo "    \"INSERT INTO demo_db.Categories VALUES(100, 'Fail', 'No debe funcionar');\""
 echo ""
 echo "Cuando estés listo para activar la replicación bidireccional, ejecuta:"
