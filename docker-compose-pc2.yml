@@ -16,7 +16,7 @@ services:
     env_file:
       - .env.master2
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - ./mysql-master2/my.cnf:/etc/mysql/conf.d/my.cnf:ro
       - ./mysql-master2/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

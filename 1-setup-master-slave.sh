@@ -113,8 +113,13 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
-# ── Paso 4: Verificar modo de solo lectura en Slave (PC2) ──
-echo "4️⃣  Verificando modo de solo lectura en Slave (PC2)..."
+# ── Paso 4: Activar modo de solo lectura en Slave (PC2) ────
+echo "4️⃣  Activando modo de solo lectura en Slave (PC2)..."
+mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -e "
+SET GLOBAL read_only = ON;
+SET GLOBAL super_read_only = ON;
+" 2>/dev/null
+
 READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
     "SELECT @@global.read_only;" 2>/dev/null)
 SUPER_READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$ADMIN_PASS" -N -e \
@@ -123,9 +128,8 @@ SUPER_READ_ONLY=$(mysql -h "$MASTER2_IP" -P "$MYSQL_PORT" -u"$ADMIN_USER" -p"$AD
 if [ "$READ_ONLY" = "1" ] && [ "$SUPER_READ_ONLY" = "1" ]; then
     echo "   ✅ Slave (PC2) está en modo solo lectura (read_only=ON, super_read_only=ON)."
 else
-    echo "   ⚠️  ADVERTENCIA: Slave (PC2) NO está en modo solo lectura."
+    echo "   ❌ ERROR: No se pudo activar el modo solo lectura en Slave (PC2)."
     echo "      read_only=$READ_ONLY, super_read_only=$SUPER_READ_ONLY"
-    echo "      Verifica que mysql-master2/my.cnf incluya read_only=ON y super_read_only=ON."
 fi
 
 echo ""
